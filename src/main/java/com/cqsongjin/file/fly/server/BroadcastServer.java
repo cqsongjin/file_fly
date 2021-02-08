@@ -77,7 +77,7 @@ public class BroadcastServer implements Server{
                         }
                         iterator.remove();
                     }
-                    if (!isStop) {
+                    if (isStop) {
                         System.out.println("停止扫描client广播监听");
                         break;
                     }

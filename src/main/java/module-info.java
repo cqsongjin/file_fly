@@ -5,4 +5,5 @@ open module cqsongjin.javafx.lab {
     requires javafx.fxml;
     requires fastjson;
     requires org.slf4j;
+    requires java.sql;
 }

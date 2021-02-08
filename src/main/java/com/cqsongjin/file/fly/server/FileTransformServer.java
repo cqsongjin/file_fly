@@ -50,7 +50,7 @@ public class FileTransformServer implements Server{
                 ssc.register(selector, SelectionKey.OP_ACCEPT);
                 while (true) {
                     System.out.println("do select");
-                    if (!isStop) {
+                    if (isStop) {
                         log.info("关闭TCP监听");
                         return;
                     }

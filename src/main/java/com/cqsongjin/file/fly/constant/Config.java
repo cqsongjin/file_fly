@@ -37,7 +37,11 @@ public class Config {
             properties.load(Files.newBufferedReader(path, StandardCharsets.UTF_8));
         }
         TRANSFORM_PORT = Integer.parseInt(properties.getProperty("listen.transform.port", "28080"));
+        BROADCAST_PORT = Integer.parseInt(properties.getProperty("listen.broadcast.port", "28082"));
+
         TRANSFORM_FRAME_SIZE = Integer.parseInt(properties.getProperty("transform.frame.size", "1048576"));
+        BROADCAST_FRAME_SIZE = Integer.parseInt(properties.getProperty("broadcast.frame.size", "1024"));
+
         LAST_LINKED_IP = properties.getProperty("last.linked.ip", "");
         OUTPUT_DIR = properties.getProperty("output.dir", "");
         writeConfig();
@@ -50,7 +54,9 @@ public class Config {
         }
         Properties properties = new Properties();
         properties.put("listen.transform.port", TRANSFORM_PORT + "");
+        properties.put("listen.broadcast.port", BROADCAST_PORT + "");
         properties.put("transform.frame.size", TRANSFORM_FRAME_SIZE + "");
+        properties.put("broadcast.frame.size", BROADCAST_FRAME_SIZE + "");
         properties.put("last.linked.ip", LAST_LINKED_IP);
         properties.put("output.dir", OUTPUT_DIR);
         properties.store(Files.newBufferedWriter(path, StandardCharsets.UTF_8), "the file_fly config file");
