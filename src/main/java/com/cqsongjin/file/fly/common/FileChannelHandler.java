@@ -1,6 +1,10 @@
 package com.cqsongjin.file.fly.common;
 
 import com.cqsongjin.file.fly.constant.Config;
+import com.cqsongjin.file.fly.message.DTMessage;
+import com.cqsongjin.file.fly.message.FileCreateMessage;
+import com.cqsongjin.file.fly.message.FileFinishMessage;
+import com.cqsongjin.file.fly.message.FileTransformMessage;
 
 import java.io.File;
 import java.io.IOException;
@@ -25,16 +29,21 @@ public class FileChannelHandler {
     private final String targetDir;
 
     private FileChannel fileChannel;
+    private DTMessage dtMessage;
+    private FileCreateMessage fileCreateMessage;
+    private FileTransformMessage fileTransformMessage;
+    private FileFinishMessage fileFinishMessage;
     private boolean closed;
-    public static int frameSize = Config.FRAME_SIZE;
-    private int left;
-    int i = 1;
+    public static int frameSize = Config.TRANSFORM_FRAME_SIZE;
 
     public FileChannelHandler(String targetDir) throws IOException {
         this.byteBuffer = ByteBuffer.allocate(frameSize);
         this.targetDir = targetDir;
-        this.left = 0;
-        init();
+        this.dtMessage = new DTMessage();
+        this.fileCreateMessage = new FileCreateMessage();
+        this.fileTransformMessage = new FileTransformMessage();
+        this.fileFinishMessage = new FileFinishMessage();
+        this.init();
     }
 
     private void init() throws IOException {
@@ -56,28 +65,17 @@ public class FileChannelHandler {
             }
             //处理缓存中的数据
             byteBuffer.flip();
-//            System.out.println("第 " + i++ + "次接收");
-//            final byte[] array = byteBuffer.array();
-//            for (int i1 = 0; i1 < 21; i1++) {
-//                System.out.print(array[i1] + ",");
-//            }
-            final byte type = byteBuffer.get();
-            byte[] md5 = new byte[16];
-            byteBuffer.get(md5);
-            final int length = byteBuffer.getInt();
-//            System.out.println("读取数据载荷：" + length + " 实际剩余数据：" + byteBuffer.remaining());
-            byte[] data = new byte[length];
-            byteBuffer.get(data);
-            handleFrame(selectionKey, channel, type, md5, length, data);
+            this.dtMessage.readBuffer(byteBuffer);
+            handleFrame(selectionKey, channel);
             byteBuffer.clear();
         } while (read > 0);
     }
 
-    public void handleFrame(SelectionKey selectionKey, SocketChannel channel, byte type, byte[] md5, int length, byte[]data) throws IOException {
-//        System.out.println("type -> " + type);
-        if (type == 0) {
+    public void handleFrame(SelectionKey selectionKey, SocketChannel channel) throws IOException {
+        if (this.dtMessage.getType() == DTMessage.FILE_CREATE) {
             //创建文件和文件夹
-            String fileName = new String(data, StandardCharsets.UTF_8);
+            this.fileCreateMessage.parse(this.dtMessage);
+            String fileName = fileCreateMessage.getFileName();
             final Path targetPath = Paths.get(targetDir, fileName);
             final File file = targetPath.toFile();
             if (!file.getParentFile().exists()) {
@@ -85,10 +83,11 @@ public class FileChannelHandler {
             }
             System.out.println("输出文件 -> " + file.getAbsolutePath());
             this.fileChannel = FileChannel.open(targetPath, CREATE, WRITE);
-        } else if (type == 1) {
+        } else if (this.dtMessage.getType() == DTMessage.FILE_TRANSFORM) {
             //写文件
-            fileChannel.write(ByteBuffer.wrap(data));
-        } else if (type == 2) {
+            this.fileTransformMessage.parse(this.dtMessage);
+            fileChannel.write(ByteBuffer.wrap(fileTransformMessage.getData()));
+        } else if (this.dtMessage.getType() == DTMessage.FILE_FINISH) {
             System.out.println("完成文件");
             this.close(selectionKey, channel);
         } else {

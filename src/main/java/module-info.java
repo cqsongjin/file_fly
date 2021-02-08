@@ -3,4 +3,6 @@ open module cqsongjin.javafx.lab {
     requires javafx.graphics;
     requires javafx.controls;
     requires javafx.fxml;
+    requires fastjson;
+    requires org.slf4j;
 }

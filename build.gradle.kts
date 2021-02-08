@@ -38,6 +38,16 @@ repositories {
 dependencies {
     testImplementation("junit", "junit", "4.12")
     implementation("com.google.guava:guava:30.1-jre")
+    implementation("com.alibaba:fastjson:1.2.75")
+    implementation("org.slf4j:slf4j-api:1.7.29")
+    implementation("ch.qos.logback:logback-classic:1.2.3")
+
+
+    //lombok配置
+//    compileOnly("org.projectlombok:lombok:1.18.16")
+//    annotationProcessor("org.projectlombok:lombok:1.18.16")
+//    testCompileOnly("org.projectlombok:lombok:1.18.16")
+//    testAnnotationProcessor("org.projectlombok:lombok:1.18.16")
 }
 
 val mycopy by tasks.register<Copy>("mycopy") {

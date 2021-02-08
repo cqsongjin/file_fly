@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration scan="${scan:-true}" scanPeriod="${scanPeriod:-60 second}">
+    <property name="LOG_HOME" value="/tmp/logs" />
+    <!--    <property resource="bootstrap.properties" />-->
+    <property name="CONSOLE_LOG_PATTERN"
+              value="%d{yyyy-MM-dd HH:mm:ss.SSS} ${LOG_LEVEL_PATTERN:-%5p} [%thread] %-5level %logger{50} - %msg%n" />
+    <appender name="consoleLog" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>${CONSOLE_LOG_PATTERN}</pattern>
+            <charset>utf8</charset>
+        </encoder>
+    </appender>
+
+    <!-- INFO. -->
+    <appender name="infoLog" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_HOME}/${spring.application.name}/applog/info.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <FileNamePattern>${LOG_HOME}/${spring.application.name}/applog/info.log.%d{yyyy-MM-dd}.%i</FileNamePattern>
+            <MaxHistory>${fileHistory:-30}</MaxHistory>
+            <TimeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+                <MaxFileSize>${fileSize:-150MB}</MaxFileSize>
+            </TimeBasedFileNamingAndTriggeringPolicy>
+        </rollingPolicy>
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} ${LOG_LEVEL_PATTERN:-%5p} [%thread] %-5level %logger{50} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- ERROR. -->
+    <appender name="errorLog" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_HOME}/${spring.application.name}/applog/error.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <FileNamePattern>${LOG_HOME}/${spring.application.name}/applog/error.log.%d{yyyy-MM-dd}.%i</FileNamePattern>
+            <MaxHistory>${fileHistory:-30}</MaxHistory>
+            <TimeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+                <MaxFileSize>${fileSize:-150MB}</MaxFileSize>
+            </TimeBasedFileNamingAndTriggeringPolicy>
+        </rollingPolicy>
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>ERROR</level>
+        </filter>
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} ${LOG_LEVEL_PATTERN:-%5p} [%thread] %-5level %logger{50} - %msg%n</pattern>
+        </encoder>
+    </appender>
+    <!--    <appender name="stash" class="net.logstash.logback.appender.LogstashTcpSocketAppender">-->
+    <!--        <destination>10.244.76.51:5960</destination>-->
+    <!--        <includeCallerData>true</includeCallerData>-->
+
+    <!--        <encoder class="net.logstash.logback.encoder.LogstashEncoder">-->
+    <!--            <includeCallerData>true</includeCallerData>-->
+    <!--            <customFields>{"type":"java-${spring.application.name}","HOSTNAME":"${HOSTNAME}"}</customFields>-->
+    <!--            &lt;!&ndash;            <maxLength>2048</maxLength>&ndash;&gt;-->
+    <!--        </encoder>-->
+    <!--    </appender>-->
+
+    <logger name="com.netflix.discovery" level="WARN" />
+    <logger name="org.spring" level="WARN" />
+    <logger name="org.springframework" level="WARN" />
+    <logger name="org.jboss.resteasy" level="WARN" />
+    <logger name="org.apache.zookeeper" level="WARN" />
+    <logger name="com.alibaba.dubbo" level="WARN" />
+    <logger name="springfox.documentation" level="WARN" />
+    <logger name="org.apache.ibatis" level="WARN" />
+    <logger name="org.apache.http" level="WARN" />
+    <logger name="org.mybatis" level="WARN" />
+    <logger name="org.hibernate" level="WARN" />
+    <logger name="ma.glasnost" level="WARN" />
+    <logger name="com.netflix" level="WARN" />
+
+    <!-- 根日志. -->
+    <root level="INFO">
+        <!--        <appender-ref ref="stash"/>-->
+        <appender-ref ref="consoleLog"/>
+        <appender-ref ref="infoLog"/>
+        <appender-ref ref="errorLog"/>
+    </root>
+</configuration>
