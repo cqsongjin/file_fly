@@ -5,14 +5,14 @@ import com.cqsongjin.file.fly.common.Global;
 import com.cqsongjin.file.fly.constant.Config;
 import com.cqsongjin.file.fly.controller.IndexController;
 import com.cqsongjin.file.fly.message.ClientMessage;
+import javafx.application.Platform;
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
+import java.net.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.SelectionKey;
@@ -37,7 +37,6 @@ public class BroadcastServer implements Server{
 
     public BroadcastServer(IndexController indexController) {
         this.indexController = indexController;
-
     }
 
     @Override
@@ -45,21 +44,27 @@ public class BroadcastServer implements Server{
         this.isStop = false;
         EXECUTOR_SERVICE.execute(() -> {
             try {
-                DatagramChannel datagramChannel = DatagramChannel.open();
-                datagramChannel.configureBlocking(false);
-                datagramChannel.bind(new InetSocketAddress(Config.BROADCAST_PORT));
+                DatagramChannel serverDatagramChannel = DatagramChannel.open();
+                serverDatagramChannel.configureBlocking(false);
+                serverDatagramChannel.bind(new InetSocketAddress(Config.BROADCAST_PORT));
                 Selector selector = Selector.open();
-                datagramChannel.register(selector, SelectionKey.OP_READ);
+                serverDatagramChannel.register(selector, SelectionKey.OP_READ);
+                serverDatagramChannel.setOption(StandardSocketOptions.SO_BROADCAST, Boolean.TRUE);
                 //更新扫描到的客户端数据
                 final Service<Void> service = new Service<>() {
                     @Override
                     protected Task<Void> createTask() {
-                        try {
-                            sendBroadcast(datagramChannel);
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                        return null;
+                        return new Task<>() {
+                            @Override
+                            protected Void call() throws Exception {
+                                try {
+                                    sendBroadcast(serverDatagramChannel);
+                                } catch (IOException e) {
+                                    e.printStackTrace();
+                                }
+                                return null;
+                            }
+                        };
                     }
                 };
                 service.progressProperty();
@@ -90,7 +95,7 @@ public class BroadcastServer implements Server{
     }
 
     public void handleRead(DatagramChannel channel) throws IOException {
-        channel.read(this.readBuffer);
+        channel.receive(this.readBuffer);
         if (this.readBuffer.position() < this.readBuffer.capacity()) {
             return;
         }
@@ -98,7 +103,8 @@ public class BroadcastServer implements Server{
         ClientMessage message = new ClientMessage();
         message.readBuffer(this.readBuffer);
         final ClientMessage.Client client = message.getClient();
-        Global.getClientList().add(client);
+        log.info("发现file fly 客户端：{}，IP地址：{}", client.getName(), client.getIpAddr());
+        Platform.runLater(() -> indexController.updateReceiver(client.getIpAddr(), client.getName()));
         this.readBuffer.clear();
 
     }
@@ -106,7 +112,7 @@ public class BroadcastServer implements Server{
     public void sendBroadcast(DatagramChannel datagramChannel) throws IOException {
         while (!this.isStop) {
             try {
-                TimeUnit.SECONDS.sleep(30);
+                TimeUnit.SECONDS.sleep(5);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -117,7 +123,7 @@ public class BroadcastServer implements Server{
             this.writeBuffer.flip();
             log.info("发送广播数据 ->" + JSON.toJSONString(client));
             while (this.writeBuffer.hasRemaining()) {
-                datagramChannel.send(this.writeBuffer, new InetSocketAddress("255.255.255.255", Config.BROADCAST_PORT));
+                datagramChannel.send(this.writeBuffer, new InetSocketAddress("192.168.81.255", Config.BROADCAST_PORT));
             }
             this.writeBuffer.clear();
         }

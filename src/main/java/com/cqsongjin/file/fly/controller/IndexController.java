@@ -84,12 +84,12 @@ public class IndexController {
         FileTransformServer fileTransformServer = new FileTransformServer(this);
         broadcastServer.startServer();
         fileTransformServer.startServer();
-        scanReceiver();
+//        scanReceiver();
     }
 
-    private Set<Receiver> scanReceiver() {
-        return Set.of(new Receiver("111", "r111"), new Receiver("222", "r222"), new Receiver("333", "r333"));
-    }
+//    private Set<Receiver> scanReceiver() {
+//        return Set.of(new Receiver("111", "r111"), new Receiver("222", "r222"), new Receiver("333", "r333"));
+//    }
 
     private void doFileTransform(File targetFile) throws IOException {
         final String targetHost = target_host_text.getText();
@@ -193,6 +193,13 @@ public class IndexController {
         System.out.println("send file finished");
     }
 
+    public void updateReceiver(String ipAddr, String name) {
+        final Receiver receiver = new Receiver(ipAddr, name);
+        if (!list.contains(receiver)) {
+            list.add(receiver);
+        }
+    }
+
     private static class Receiver {
         private String ipAddr;
         private String name;
@@ -200,6 +207,19 @@ public class IndexController {
         public Receiver(String ipAddr, String name) {
             this.ipAddr = ipAddr;
             this.name = name;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (!(o instanceof Receiver)) return false;
+            Receiver receiver = (Receiver) o;
+            return getIpAddr().equals(receiver.getIpAddr()) && getName().equals(receiver.getName());
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(getIpAddr(), getName());
         }
 
         public String getIpAddr() {
