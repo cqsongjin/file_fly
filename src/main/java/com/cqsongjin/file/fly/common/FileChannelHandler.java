@@ -5,6 +5,7 @@ import com.cqsongjin.file.fly.message.DTMessage;
 import com.cqsongjin.file.fly.message.FileCreateMessage;
 import com.cqsongjin.file.fly.message.FileFinishMessage;
 import com.cqsongjin.file.fly.message.FileTransformMessage;
+import com.cqsongjin.file.fly.server.FileTransformServer;
 
 import java.io.File;
 import java.io.IOException;
@@ -25,6 +26,10 @@ import static java.nio.file.StandardOpenOption.WRITE;
 //文件结束请求：type=2 + md5
 //每次定长读取指定大小的字节数
 public class FileChannelHandler {
+    public static int frameSize = Config.TRANSFORM_FRAME_SIZE;
+
+    private FileTransformServer server;
+
     private final ByteBuffer byteBuffer;
     private final String targetDir;
 
@@ -33,10 +38,12 @@ public class FileChannelHandler {
     private FileCreateMessage fileCreateMessage;
     private FileTransformMessage fileTransformMessage;
     private FileFinishMessage fileFinishMessage;
+    private long receiveBytes = 0;
+    private long fileSize = 0;
     private boolean closed;
-    public static int frameSize = Config.TRANSFORM_FRAME_SIZE;
 
-    public FileChannelHandler(String targetDir) throws IOException {
+    public FileChannelHandler(FileTransformServer server, String targetDir) throws IOException {
+        this.server = server;
         this.byteBuffer = ByteBuffer.allocate(frameSize);
         this.targetDir = targetDir;
         this.dtMessage = new DTMessage();
@@ -50,13 +57,13 @@ public class FileChannelHandler {
 
     }
 
-    public void readChannel2File(SelectionKey selectionKey, SocketChannel channel) throws IOException {
+    public long readChannel2File(SelectionKey selectionKey, SocketChannel channel) throws IOException {
         System.out.println("读数据");
         int read = 0;
         do {
             if (this.closed) {
                 System.out.println("当前传输已完成");
-                return;
+                return 100;
             }
             read = channel.read(byteBuffer);
             if (byteBuffer.position() < frameSize) {
@@ -68,7 +75,9 @@ public class FileChannelHandler {
             this.dtMessage.readBuffer(byteBuffer);
             handleFrame(selectionKey, channel);
             byteBuffer.clear();
+            return evaluateProgress();
         } while (read > 0);
+        return 100;
     }
 
     public void handleFrame(SelectionKey selectionKey, SocketChannel channel) throws IOException {
@@ -76,6 +85,8 @@ public class FileChannelHandler {
             //创建文件和文件夹
             this.fileCreateMessage.parse(this.dtMessage);
             String fileName = fileCreateMessage.getFileName();
+            this.fileSize = this.fileCreateMessage.getFileSize();
+            this.receiveBytes = 0;
             final Path targetPath = Paths.get(targetDir, fileName);
             final File file = targetPath.toFile();
             if (!file.getParentFile().exists()) {
@@ -86,13 +97,28 @@ public class FileChannelHandler {
         } else if (this.dtMessage.getType() == DTMessage.FILE_TRANSFORM) {
             //写文件
             this.fileTransformMessage.parse(this.dtMessage);
-            fileChannel.write(ByteBuffer.wrap(fileTransformMessage.getData()));
+            final ByteBuffer buffer = ByteBuffer.wrap(fileTransformMessage.getData());
+            while (buffer.hasRemaining()) {
+                fileChannel.write(buffer);
+            }
+            this.updateProgress(fileTransformMessage.getData().length);
         } else if (this.dtMessage.getType() == DTMessage.FILE_FINISH) {
             System.out.println("完成文件");
             this.close(selectionKey, channel);
         } else {
             System.out.println("数据有误");
         }
+    }
+    public void updateProgress(long newReceiveBytes) {
+        this.receiveBytes += newReceiveBytes;
+    }
+
+    public long evaluateProgress() {
+        if (fileSize == 0) {
+            return 100;
+        }
+        System.out.println("计算进度：读取：" + receiveBytes + "总大小：" + this.fileSize);
+        return this.receiveBytes * 100 / this.fileSize;
     }
 
     public void close(SelectionKey selectionKey, SocketChannel channel) throws IOException {

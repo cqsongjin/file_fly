@@ -18,6 +18,9 @@ public class Config {
     public static String LAST_LINKED_IP;
     public static String OUTPUT_DIR;
     public static final String USER_HOME;
+    public static String HOST_IP;
+    public static String HOST_NAME;
+
 
     static {
         USER_HOME = System.getProperty("user.home", "/tmp");
@@ -44,6 +47,10 @@ public class Config {
 
         LAST_LINKED_IP = properties.getProperty("last.linked.ip", "");
         OUTPUT_DIR = properties.getProperty("output.dir", "");
+
+        HOST_IP = properties.getProperty("host.ip", "");
+        HOST_NAME = properties.getProperty("host.name", "");
+
         writeConfig();
     }
 
@@ -59,6 +66,8 @@ public class Config {
         properties.put("broadcast.frame.size", BROADCAST_FRAME_SIZE + "");
         properties.put("last.linked.ip", LAST_LINKED_IP);
         properties.put("output.dir", OUTPUT_DIR);
+        properties.put("host.ip", HOST_IP);
+        properties.put("host.name", HOST_NAME);
         properties.store(Files.newBufferedWriter(path, StandardCharsets.UTF_8), "the file_fly config file");
     }
 }

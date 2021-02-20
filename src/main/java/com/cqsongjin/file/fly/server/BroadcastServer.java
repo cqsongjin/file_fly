@@ -117,7 +117,9 @@ public class BroadcastServer implements Server{
                 e.printStackTrace();
             }
             final InetAddress localHost = InetAddress.getLocalHost();
-            ClientMessage.Client client = new ClientMessage.Client(localHost.getHostAddress(), localHost.getHostName());
+            String hostIp = Config.HOST_IP.isBlank() ? localHost.getHostAddress() : Config.HOST_IP;
+            String hostName = Config.HOST_NAME.isBlank() ? localHost.getHostName() : Config.HOST_NAME;
+            ClientMessage.Client client = new ClientMessage.Client(hostIp, hostName);
             ClientMessage message = new ClientMessage(client);
             message.writeBuffer(this.writeBuffer);
             this.writeBuffer.flip();

@@ -18,6 +18,15 @@ public class DTMessage {
     //4个字节
     protected int length;
 
+    public DTMessage() {
+    }
+
+    public DTMessage(byte type, byte[] md5, int length) {
+        this.type = type;
+        this.md5 = md5;
+        this.length = length;
+    }
+
     public void parse(DTMessage dtMessage) {
         this.origin = dtMessage.origin;
         this.type = dtMessage.type;
@@ -43,4 +52,5 @@ public class DTMessage {
     public byte getType() {
         return type;
     }
+
 }

@@ -3,10 +3,16 @@ package com.cqsongjin.file.fly.controller;
 import com.cqsongjin.file.fly.APP;
 import com.cqsongjin.file.fly.common.FileChannelHandler;
 import com.cqsongjin.file.fly.constant.Config;
+import com.cqsongjin.file.fly.message.DTMessage;
+import com.cqsongjin.file.fly.message.FileCreateMessage;
+import com.cqsongjin.file.fly.message.FileFinishMessage;
 import com.cqsongjin.file.fly.server.BroadcastServer;
 import com.cqsongjin.file.fly.server.FileTransformServer;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.ProgressBar;
@@ -44,7 +50,6 @@ public class IndexController {
     private TextField target_host_text;
 
 
-
     private final ObservableList<Receiver> list = FXCollections.observableArrayList();
 
     public void init() {
@@ -62,6 +67,9 @@ public class IndexController {
             }
         });
         receiver_combobox.setItems(list);
+        receiver_combobox.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
+            target_host_text.setText(newValue.ipAddr);
+        });
         file_box.setOnDragOver(event -> {
             event.acceptTransferModes(TransferMode.ANY);
             event.consume();
@@ -73,11 +81,14 @@ public class IndexController {
             System.out.println(targetFile.getName());
             event.setDropCompleted(true);
             event.consume();
-            try {
-                doFileTransform(targetFile);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            APP.EXECUTOR_SERVICE.execute(() -> {
+                try {
+                    doFileTransform(targetFile);
+                } catch (IOException e) {
+                    e.printStackTrace();
+
+                }
+            });
         });
 
         BroadcastServer broadcastServer = new BroadcastServer(this);
@@ -85,6 +96,7 @@ public class IndexController {
         broadcastServer.startServer();
         fileTransformServer.startServer();
 //        scanReceiver();
+        process_line_bar.progressProperty().bind(fileTransformServer.getServerTask().progressProperty());
     }
 
 //    private Set<Receiver> scanReceiver() {
@@ -129,14 +141,9 @@ public class IndexController {
         FileChannel fileChannel = FileChannel.open(path);
         final String fileName = path.getFileName().toString();
         ByteBuffer buffer = ByteBuffer.allocate(FileChannelHandler.frameSize);
-        buffer.put((byte) 0);
-        buffer.put(new byte[16]);
-        final byte[] fileNameBytes = fileName.getBytes(StandardCharsets.UTF_8);
-        buffer.putInt(fileNameBytes.length);
-        buffer.put(fileNameBytes);
-        buffer.put(new byte[FileChannelHandler.frameSize - buffer.position()]);
+        FileCreateMessage fileCreateMessage = new FileCreateMessage(new byte[16], fileName.getBytes(StandardCharsets.UTF_8).length, fileChannel.size(), fileName);
+        fileCreateMessage.writeBuffer(buffer);
         buffer.flip();
-
         int write = 0;
         while (buffer.hasRemaining()) {
             write += socketChannel.write(buffer);
@@ -151,7 +158,7 @@ public class IndexController {
         }
         int i = 2;
         while (read > -1) {
-            buffer.put((byte) 1);
+            buffer.put(DTMessage.FILE_TRANSFORM);
             buffer.put(new byte[16]);
             buffer.putInt(0);
             int length = 0;
@@ -181,9 +188,8 @@ public class IndexController {
             }
             buffer.clear();
         }
-        buffer.put((byte) 2);
-        buffer.put(new byte[16]);
-        buffer.put(new byte[FileChannelHandler.frameSize - buffer.position()]);
+        FileFinishMessage fileFinishMessage = new FileFinishMessage(DTMessage.FILE_FINISH, new byte[16]);
+        fileFinishMessage.writeBuffer(buffer);
         buffer.flip();
         while (buffer.hasRemaining()) {
             write += socketChannel.write(buffer);

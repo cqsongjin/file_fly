@@ -1,7 +1,7 @@
 package com.cqsongjin.file.fly.message;
 
 import com.alibaba.fastjson.JSON;
-import com.cqsongjin.file.fly.util.MD5Utils;
+import com.cqsongjin.file.fly.util.MD5Util;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -17,7 +17,7 @@ public class ClientMessage extends DTMessage{
         this.client = client;
         this.clientBytes = JSON.toJSONString(this.client).getBytes(StandardCharsets.UTF_8);
         this.type = DTMessage.BROADCAST_CLIENT;
-        this.md5 = MD5Utils.toMD5Bytes(this.clientBytes);
+        this.md5 = MD5Util.toMD5Bytes(this.clientBytes);
         this.length = this.clientBytes.length;
     }
 
